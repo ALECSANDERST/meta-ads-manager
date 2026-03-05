@@ -3,7 +3,7 @@ import { getMetaApi } from "@/lib/get-api";
 
 export async function POST(req: NextRequest) {
   try {
-    const metaApi = await getMetaApi();
+    const metaApi = await getMetaApi(req);
     const filters = await req.json();
     const reports = await metaApi.getPerformanceReport(filters);
     return NextResponse.json({ data: reports });

@@ -6,8 +6,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, ...params } = body;
 
-    const metaApi = await getMetaApi();
-    const claudeAI = await getClaudeApi();
+    const metaApi = await getMetaApi(req);
+    const claudeAI = await getClaudeApi(req);
 
     switch (action) {
       case "analyze": {

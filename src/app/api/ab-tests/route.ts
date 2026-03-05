@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, ...params } = body;
 
-    const metaApi = await getMetaApi();
+    const metaApi = await getMetaApi(req);
 
     switch (action) {
       case "create": {

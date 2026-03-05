@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMetaApi } from "@/lib/get-api";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const metaApi = await getMetaApi();
+    const metaApi = await getMetaApi(req);
     const audiences = await metaApi.getCustomAudiences();
     return NextResponse.json({ data: audiences });
   } catch (error: unknown) {
@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const metaApi = await getMetaApi();
+    const metaApi = await getMetaApi(req);
     const body = await req.json();
     const { action, ...params } = body;
 
