@@ -124,6 +124,66 @@ const instagramPositions = [
   { value: "shop", label: "Loja" },
 ];
 
+function CurrencyInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+  min,
+}: {
+  value: number | null;
+  onChange: (val: number) => void;
+  placeholder?: string;
+  className?: string;
+  min?: number;
+}) {
+  const [display, setDisplay] = React.useState(
+    value ? formatBRL(value) : ""
+  );
+
+  React.useEffect(() => {
+    if (value !== null && value !== undefined) {
+      setDisplay(formatBRL(value));
+    }
+  }, [value]);
+
+  function formatBRL(v: number): string {
+    return v.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function parseBRL(str: string): number {
+    const cleaned = str.replace(/[^\d,]/g, "").replace(",", ".");
+    return parseFloat(cleaned) || 0;
+  }
+
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-zinc-500">
+        R$
+      </span>
+      <Input
+        value={display}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^\d,]/g, "");
+          setDisplay(raw);
+        }}
+        onBlur={() => {
+          const num = parseBRL(display);
+          const final = min !== undefined && num < min ? min : num;
+          onChange(final);
+          setDisplay(formatBRL(final));
+        }}
+        placeholder={placeholder || "0,00"}
+        className={`pl-10 ${className || ""}`}
+        inputMode="decimal"
+      />
+    </div>
+  );
+}
+
 function ToggleChip({
   label,
   active,
@@ -194,17 +254,17 @@ export function AdSetStep({ form, onChange, errors }: AdSetStepProps) {
               {form.budget_type === "DAILY" ? "Orçamento Diário (R$)" : "Orçamento Total (R$)"}{" "}
               <span className="text-red-500">*</span>
             </label>
-            <Input
-              type="number"
-              min={1}
+            <CurrencyInput
               value={form.budget_type === "DAILY" ? form.daily_budget : form.lifetime_budget}
-              onChange={(e) =>
+              min={1}
+              onChange={(val) =>
                 onChange(
                   form.budget_type === "DAILY"
-                    ? { daily_budget: Number(e.target.value) }
-                    : { lifetime_budget: Number(e.target.value) }
+                    ? { daily_budget: val }
+                    : { lifetime_budget: val }
                 )
               }
+              placeholder="50,00"
               className={errors.budget ? "border-red-500" : ""}
             />
             {errors.budget && <p className="mt-1 text-xs text-red-500">{errors.budget}</p>}
@@ -295,13 +355,11 @@ export function AdSetStep({ form, onChange, errors }: AdSetStepProps) {
               <label className="mb-1 block text-xs font-medium">
                 {form.bid_strategy === "COST_CAP" ? "Custo por resultado (R$)" : "Lance máximo (R$)"}
               </label>
-              <Input
-                type="number"
+              <CurrencyInput
+                value={form.bid_amount}
                 min={0.01}
-                step={0.01}
-                value={form.bid_amount ?? ""}
-                onChange={(e) => onChange({ bid_amount: e.target.value ? Number(e.target.value) : null })}
-                placeholder="Ex: 15.00"
+                onChange={(val) => onChange({ bid_amount: val })}
+                placeholder="15,00"
               />
             </div>
           )}
