@@ -1,13 +1,13 @@
-import { getCredentials } from "@/lib/credentials";
 import { MetaAdsApi } from "@/lib/meta-api";
 import { ClaudeAI } from "@/lib/claude-ai";
 
 export async function getMetaApi(): Promise<MetaAdsApi> {
-  const creds = await getCredentials();
-  return new MetaAdsApi(creds.meta_access_token, creds.meta_ad_account_id);
+  return new MetaAdsApi(
+    process.env.META_ACCESS_TOKEN,
+    process.env.META_AD_ACCOUNT_ID
+  );
 }
 
 export async function getClaudeApi(): Promise<ClaudeAI> {
-  const creds = await getCredentials();
-  return new ClaudeAI(creds.anthropic_api_key);
+  return new ClaudeAI(process.env.ANTHROPIC_API_KEY);
 }
