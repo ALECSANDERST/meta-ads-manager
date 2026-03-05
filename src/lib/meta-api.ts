@@ -19,18 +19,22 @@ import type {
 const META_API_VERSION = "v21.0";
 const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
 
-class MetaAdsApi {
+export class MetaAdsApi {
   private client: AxiosInstance;
   private accessToken: string;
   private adAccountId: string;
 
-  constructor() {
-    this.accessToken = process.env.META_ACCESS_TOKEN || "";
-    this.adAccountId = process.env.META_AD_ACCOUNT_ID || "";
+  constructor(accessToken?: string, adAccountId?: string) {
+    this.accessToken = accessToken || process.env.META_ACCESS_TOKEN || "";
+    this.adAccountId = adAccountId || process.env.META_AD_ACCOUNT_ID || "";
     this.client = axios.create({
       baseURL: META_BASE_URL,
       params: { access_token: this.accessToken },
     });
+  }
+
+  isConfigured(): boolean {
+    return !!(this.accessToken && this.adAccountId);
   }
 
   // ==================== CAMPANHAS ====================

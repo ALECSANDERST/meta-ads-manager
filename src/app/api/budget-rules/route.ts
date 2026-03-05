@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import metaApi from "@/lib/meta-api";
-import claudeAI from "@/lib/claude-ai";
+import { getMetaApi, getClaudeApi } from "@/lib/get-api";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, ...params } = body;
+
+    const metaApi = await getMetaApi();
+    const claudeAI = await getClaudeApi();
 
     switch (action) {
       case "evaluate": {

@@ -23,6 +23,9 @@ export function SettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [configStatus, setConfigStatus] = useState<ConfigStatus | null>(null);
   const [showFields, setShowFields] = useState(false);
+  const [showToken, setShowToken] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showClaude, setShowClaude] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -40,9 +43,12 @@ export function SettingsPanel() {
     fetchStatus();
   }, [fetchStatus]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!metaToken && !metaAccountId && !claudeKey) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch("/api/settings", {
         method: "POST",
@@ -53,18 +59,27 @@ export function SettingsPanel() {
           anthropic_api_key: claudeKey || undefined,
         }),
       });
-      if (res.ok) {
+      const json = await res.json();
+      if (res.ok && json.success) {
         setSaved(true);
         setMetaToken("");
         setMetaAccountId("");
         setClaudeKey("");
         setShowFields(false);
-        await fetchStatus();
+        // Update status directly from POST response
+        if (json.data) {
+          setConfigStatus(json.data);
+        } else {
+          await fetchStatus();
+        }
         setTimeout(() => setSaved(false), 3000);
+      } else {
+        setSaveError(json.error || "Erro ao salvar configurações. Tente novamente.");
+        setTimeout(() => setSaveError(null), 5000);
       }
     } catch {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setSaveError("Erro de conexão. Verifique sua internet e tente novamente.");
+      setTimeout(() => setSaveError(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -137,13 +152,23 @@ export function SettingsPanel() {
               <>
                 <div>
                   <label className="mb-1 block text-sm font-medium">Access Token</label>
-                  <Input
-                    type="password"
-                    autoComplete="off"
-                    value={metaToken}
-                    onChange={(e) => setMetaToken(e.target.value)}
-                    placeholder={isMetaConfigured ? "Novo token (deixe vazio para manter)" : "Cole seu Meta Access Token aqui"}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showToken ? "text" : "password"}
+                      autoComplete="off"
+                      value={metaToken}
+                      onChange={(e) => setMetaToken(e.target.value)}
+                      placeholder={isMetaConfigured ? "Novo token (deixe vazio para manter)" : "Cole seu Meta Access Token aqui"}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    >
+                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <p className="mt-1 text-[11px] text-zinc-400">
                     Obtenha em{" "}
                     <a
@@ -159,13 +184,23 @@ export function SettingsPanel() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium">Ad Account ID</label>
-                  <Input
-                    type="password"
-                    autoComplete="off"
-                    value={metaAccountId}
-                    onChange={(e) => setMetaAccountId(e.target.value)}
-                    placeholder={isMetaConfigured ? "Novo ID (deixe vazio para manter)" : "act_123456789"}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showAccount ? "text" : "password"}
+                      autoComplete="off"
+                      value={metaAccountId}
+                      onChange={(e) => setMetaAccountId(e.target.value)}
+                      placeholder={isMetaConfigured ? "Novo ID (deixe vazio para manter)" : "act_123456789"}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAccount(!showAccount)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                    >
+                      {showAccount ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <p className="mt-1 text-[11px] text-zinc-400">
                     Formato: act_ seguido do ID numérico da sua conta de anúncios.
                   </p>
@@ -207,13 +242,23 @@ export function SettingsPanel() {
             {(showFields || !isClaudeConfigured) && (
               <div>
                 <label className="mb-1 block text-sm font-medium">API Key</label>
-                <Input
-                  type="password"
-                  autoComplete="off"
-                  value={claudeKey}
-                  onChange={(e) => setClaudeKey(e.target.value)}
-                  placeholder={isClaudeConfigured ? "Nova chave (deixe vazio para manter)" : "sk-ant-..."}
-                />
+                <div className="relative">
+                  <Input
+                    type={showClaude ? "text" : "password"}
+                    autoComplete="off"
+                    value={claudeKey}
+                    onChange={(e) => setClaudeKey(e.target.value)}
+                    placeholder={isClaudeConfigured ? "Nova chave (deixe vazio para manter)" : "sk-ant-..."}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowClaude(!showClaude)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  >
+                    {showClaude ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="mt-1 text-[11px] text-zinc-400">
                   Obtenha em{" "}
                   <a
@@ -253,6 +298,20 @@ export function SettingsPanel() {
               )}
             </Button>
           </div>
+
+          {saveError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+              <XCircle className="mr-1 inline h-3.5 w-3.5" />
+              {saveError}
+            </div>
+          )}
+
+          {saved && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400">
+              <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
+              Configurações salvas com sucesso! Recarregue a página para usar dados reais.
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import metaApi from "@/lib/meta-api";
+import { getMetaApi } from "@/lib/get-api";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, ...params } = body;
+
+    const metaApi = await getMetaApi();
 
     switch (action) {
       case "create": {

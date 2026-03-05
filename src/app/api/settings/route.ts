@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { getCredentials, buildCredentialsCookie, type StoredCredentials } from "@/lib/credentials";
 
 function maskValue(value: string): string {
   if (!value || value.length < 8) return "••••••••";
@@ -12,44 +11,40 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { meta_access_token, meta_ad_account_id, anthropic_api_key } = body;
 
-    const envPath = path.join(process.cwd(), ".env.local");
+    // Read existing credentials from cookie/env
+    const existing = await getCredentials();
 
-    let envContent = "";
-    try {
-      envContent = await fs.readFile(envPath, "utf-8");
-    } catch {
-      envContent = "";
-    }
+    // Merge: only overwrite if a new value is provided
+    const merged: StoredCredentials = {
+      meta_access_token: meta_access_token || existing.meta_access_token || "",
+      meta_ad_account_id: meta_ad_account_id || existing.meta_ad_account_id || "",
+      anthropic_api_key: anthropic_api_key || existing.anthropic_api_key || "",
+    };
 
-    const envLines = envContent.split("\n").filter((l) => l.trim() !== "");
-    const envMap = new Map<string, string>();
+    // Save as encrypted HTTP-only cookie
+    const cookie = buildCredentialsCookie(merged);
 
-    for (const line of envLines) {
-      const eqIndex = line.indexOf("=");
-      if (eqIndex > 0 && !line.startsWith("#")) {
-        envMap.set(line.substring(0, eqIndex).trim(), line.substring(eqIndex + 1).trim());
-      }
-    }
-
-    if (meta_access_token) envMap.set("META_ACCESS_TOKEN", meta_access_token);
-    if (meta_ad_account_id) envMap.set("META_AD_ACCOUNT_ID", meta_ad_account_id);
-    if (anthropic_api_key) envMap.set("ANTHROPIC_API_KEY", anthropic_api_key);
-
-    if (!envMap.has("META_APP_ID")) envMap.set("META_APP_ID", "");
-    if (!envMap.has("META_APP_SECRET")) envMap.set("META_APP_SECRET", "");
-    if (!envMap.has("NEXT_PUBLIC_APP_URL")) envMap.set("NEXT_PUBLIC_APP_URL", "http://localhost:3000");
-
-    const newEnv = Array.from(envMap.entries())
-      .map(([key, value]) => `${key}=${value}`)
-      .join("\n");
-
-    await fs.writeFile(envPath, newEnv + "\n", "utf-8");
-
-    // Never return actual tokens — only masked confirmation
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
-      message: "Configurações salvas. Reinicie o servidor para aplicar.",
+      data: {
+        meta_configured: !!(merged.meta_access_token && merged.meta_ad_account_id),
+        claude_configured: !!merged.anthropic_api_key,
+        meta_account_hint: merged.meta_ad_account_id ? maskValue(merged.meta_ad_account_id) : null,
+        meta_token_hint: merged.meta_access_token ? maskValue(merged.meta_access_token) : null,
+        claude_key_hint: merged.anthropic_api_key ? maskValue(merged.anthropic_api_key) : null,
+      },
+      message: "Configurações salvas com sucesso!",
     });
+
+    response.cookies.set(cookie.name, cookie.value, {
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+      sameSite: cookie.sameSite,
+      path: cookie.path,
+      maxAge: cookie.maxAge,
+    });
+
+    return response;
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Erro ao salvar configurações";
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -58,11 +53,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    const metaToken = process.env.META_ACCESS_TOKEN || "";
-    const metaAccount = process.env.META_AD_ACCOUNT_ID || "";
-    const claudeKey = process.env.ANTHROPIC_API_KEY || "";
+    const creds = await getCredentials();
 
-    // Never expose real values — only booleans and masked hints
+    const metaToken = creds.meta_access_token || "";
+    const metaAccount = creds.meta_ad_account_id || "";
+    const claudeKey = creds.anthropic_api_key || "";
+
     return NextResponse.json({
       data: {
         meta_configured: !!(metaToken && metaAccount),

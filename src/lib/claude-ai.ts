@@ -7,10 +7,6 @@ import type {
   Campaign,
 } from "@/types/meta-ads";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
-
 const SYSTEM_PROMPT = `Você é um especialista em Meta Ads (Facebook/Instagram Ads) com anos de experiência em gestão de campanhas de performance.
 Seu papel é analisar dados de campanhas, identificar oportunidades de otimização e fornecer recomendações acionáveis.
 
@@ -36,9 +32,17 @@ Formato de resposta para análises: SEMPRE retorne um JSON válido no formato:
 }`;
 
 export class ClaudeAI {
+  private anthropic: Anthropic;
+
+  constructor(apiKey?: string) {
+    this.anthropic = new Anthropic({
+      apiKey: apiKey || process.env.ANTHROPIC_API_KEY || "",
+    });
+  }
+
   async analyzePerformance(reports: PerformanceReport[]): Promise<ClaudeAnalysis> {
     const dataStr = JSON.stringify(reports, null, 2);
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
@@ -85,7 +89,7 @@ Retorne APENAS o JSON no formato especificado.`,
     campaigns: Campaign[],
     reports: PerformanceReport[]
   ): Promise<BudgetRule[]> {
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
@@ -157,7 +161,7 @@ Retorne APENAS o array JSON.`,
       expected_improvement: string;
     }[];
   }> {
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
@@ -217,7 +221,7 @@ Retorne APENAS o JSON.`,
       contextStr += `\n\nDados de performance recentes:\n${JSON.stringify(context.reports.slice(0, 20), null, 2)}`;
     }
 
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       system: `${SYSTEM_PROMPT}\n\nContexto atual das campanhas do usuário:${contextStr}`,
@@ -235,7 +239,7 @@ Retorne APENAS o JSON.`,
     objective: string;
     variations: number;
   }): Promise<{ copies: { headline: string; body: string; cta: string }[] }> {
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,

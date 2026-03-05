@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import metaApi from "@/lib/meta-api";
+import { getMetaApi } from "@/lib/get-api";
 
 export async function GET(req: NextRequest) {
   try {
+    const metaApi = await getMetaApi();
     const adSetId = req.nextUrl.searchParams.get("adset_id") || undefined;
     const ads = await metaApi.getAds(adSetId);
     return NextResponse.json({ data: ads });
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const metaApi = await getMetaApi();
     const body = await req.json();
     const { action, ...params } = body;
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import metaApi from "@/lib/meta-api";
+import { getMetaApi } from "@/lib/get-api";
 
 export async function POST(req: NextRequest) {
   try {
+    const metaApi = await getMetaApi();
     const filters = await req.json();
     const reports = await metaApi.getPerformanceReport(filters);
     return NextResponse.json({ data: reports });
