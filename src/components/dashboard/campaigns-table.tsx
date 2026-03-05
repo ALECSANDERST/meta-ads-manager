@@ -32,7 +32,8 @@ import {
   Search,
   AlertTriangle,
 } from "lucide-react";
-import type { Campaign, CampaignObjective } from "@/types/meta-ads";
+import { CampaignWizard } from "./campaign-wizard";
+import type { Campaign, CampaignObjective, CampaignFormData } from "@/types/meta-ads";
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -60,15 +61,10 @@ export function CampaignsTable({ campaigns, onAction, loading }: CampaignsTableP
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [newCampaign, setNewCampaign] = useState({
-    name: "",
-    objective: "OUTCOME_SALES" as CampaignObjective,
-    daily_budget: 50,
-  });
   const [duplicateName, setDuplicateName] = useState("");
 
   const filtered = useMemo(() => {
@@ -88,11 +84,8 @@ export function CampaignsTable({ campaigns, onAction, loading }: CampaignsTableP
     return counts;
   }, [campaigns]);
 
-  const handleCreate = () => {
-    onAction("create", newCampaign);
-    setShowCreateDialog(false);
-    setNewCampaign({ name: "", objective: "OUTCOME_SALES", daily_budget: 50 });
-    toast.success("Campanha criada com sucesso!");
+  const handleCreateFull = (data: CampaignFormData) => {
+    onAction("create_full", data as unknown as Record<string, unknown>);
   };
 
   const handleDuplicate = () => {
@@ -154,7 +147,7 @@ export function CampaignsTable({ campaigns, onAction, loading }: CampaignsTableP
                 className="w-48 pl-9"
               />
             </div>
-            <Button onClick={() => setShowCreateDialog(true)} size="sm">
+            <Button onClick={() => setShowWizard(true)} size="sm">
               <Plus className="mr-1 h-4 w-4" /> Nova Campanha
             </Button>
           </div>
@@ -268,64 +261,12 @@ export function CampaignsTable({ campaigns, onAction, loading }: CampaignsTableP
         </CardContent>
       </Card>
 
-      {/* Dialog: Criar Campanha */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova Campanha</DialogTitle>
-            <DialogDescription>Preencha os dados para criar uma nova campanha no Meta Ads.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Nome da Campanha</label>
-              <Input
-                value={newCampaign.name}
-                onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                placeholder="Ex: Campanha de Vendas - Verão 2025"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Objetivo</label>
-              <Select
-                value={newCampaign.objective}
-                onValueChange={(v) =>
-                  setNewCampaign({ ...newCampaign, objective: v as CampaignObjective })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(objectiveLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Orçamento Diário (R$)</label>
-              <Input
-                type="number"
-                value={newCampaign.daily_budget}
-                onChange={(e) =>
-                  setNewCampaign({ ...newCampaign, daily_budget: Number(e.target.value) })
-                }
-                min={1}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreate} disabled={!newCampaign.name}>
-              Criar Campanha
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Wizard: Criar Campanha Completa */}
+      <CampaignWizard
+        open={showWizard}
+        onClose={() => setShowWizard(false)}
+        onSubmit={handleCreateFull}
+      />
 
       {/* Dialog: Duplicar Campanha */}
       <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>

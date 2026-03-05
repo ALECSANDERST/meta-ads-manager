@@ -185,6 +185,26 @@ export function MainDashboard() {
           updated_time: new Date().toISOString(),
         };
         store.setCampaigns([...store.campaigns, newCampaign]);
+      } else if (action === "create_full") {
+        const budgetValue = params.budget_type === "DAILY"
+          ? String(Number(params.daily_budget || 50) * 100)
+          : undefined;
+        const lifetimeValue = params.budget_type === "LIFETIME"
+          ? String(Number(params.lifetime_budget || 500) * 100)
+          : undefined;
+        const newCampaign: Campaign = {
+          id: `${Date.now()}`,
+          name: params.name as string,
+          status: (params.status as Campaign["status"]) || "PAUSED",
+          objective: (params.objective as Campaign["objective"]) || "OUTCOME_SALES",
+          daily_budget: budgetValue,
+          lifetime_budget: lifetimeValue,
+          start_time: params.start_time as string || undefined,
+          stop_time: params.end_time as string || undefined,
+          created_time: new Date().toISOString(),
+          updated_time: new Date().toISOString(),
+        };
+        store.setCampaigns([...store.campaigns, newCampaign]);
       }
       return;
     }

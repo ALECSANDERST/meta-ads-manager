@@ -259,6 +259,151 @@ export interface BudgetAction {
   min_budget?: number;
 }
 
+// ==================== CAMPAIGN CREATION WIZARD ====================
+export type BudgetType = "DAILY" | "LIFETIME";
+export type BidStrategy = "LOWEST_COST_WITHOUT_CAP" | "LOWEST_COST_WITH_BID_CAP" | "COST_CAP" | "MINIMUM_ROAS";
+export type SpecialAdCategory = "NONE" | "CREDIT" | "EMPLOYMENT" | "HOUSING" | "SOCIAL_ISSUES_ELECTIONS_POLITICS";
+export type PlacementType = "AUTOMATIC" | "MANUAL";
+export type CallToActionType =
+  | "LEARN_MORE"
+  | "SHOP_NOW"
+  | "SIGN_UP"
+  | "SUBSCRIBE"
+  | "DOWNLOAD"
+  | "GET_OFFER"
+  | "BOOK_TRAVEL"
+  | "CONTACT_US"
+  | "APPLY_NOW"
+  | "SEND_MESSAGE"
+  | "WATCH_MORE"
+  | "GET_QUOTE"
+  | "ORDER_NOW"
+  | "BUY_NOW"
+  | "NO_BUTTON";
+export type ConversionEvent =
+  | "PURCHASE"
+  | "ADD_TO_CART"
+  | "INITIATE_CHECKOUT"
+  | "LEAD"
+  | "COMPLETE_REGISTRATION"
+  | "CONTENT_VIEW"
+  | "SEARCH"
+  | "ADD_PAYMENT_INFO"
+  | "ADD_TO_WISHLIST"
+  | "CONTACT"
+  | "CUSTOMIZE_PRODUCT"
+  | "FIND_LOCATION"
+  | "SCHEDULE"
+  | "START_TRIAL"
+  | "SUBMIT_APPLICATION"
+  | "SUBSCRIBE_PAID";
+export type CreativeType = "IMAGE" | "VIDEO";
+
+export interface CampaignFormData {
+  // Step 1: Campaign
+  name: string;
+  objective: CampaignObjective;
+  status: "ACTIVE" | "PAUSED";
+  special_ad_categories: SpecialAdCategory[];
+  campaign_budget_optimization: boolean;
+  buying_type: "AUCTION" | "RESERVED";
+
+  // Step 2: Ad Set
+  adset_name: string;
+  budget_type: BudgetType;
+  daily_budget: number;
+  lifetime_budget: number;
+  bid_strategy: BidStrategy;
+  bid_amount: number | null;
+  roas_target: number | null;
+  optimization_goal: OptimizationGoal;
+  billing_event: BillingEvent;
+  conversion_event: ConversionEvent;
+  pixel_id: string;
+  start_time: string;
+  end_time: string;
+  // Targeting
+  age_min: number;
+  age_max: number;
+  genders: number[];
+  countries: string[];
+  regions: string[];
+  cities: string[];
+  interests: string[];
+  // Placements
+  placement_type: PlacementType;
+  publisher_platforms: string[];
+  facebook_positions: string[];
+  instagram_positions: string[];
+  audience_network_positions: string[];
+  messenger_positions: string[];
+
+  // Step 3: Ad
+  ad_name: string;
+  facebook_page_id: string;
+  instagram_account_id: string;
+  creative_type: CreativeType;
+  image_url: string;
+  video_url: string;
+  primary_text: string;
+  headline: string;
+  description: string;
+  destination_url: string;
+  display_link: string;
+  call_to_action: CallToActionType;
+  url_parameters: string;
+}
+
+export const DEFAULT_CAMPAIGN_FORM: CampaignFormData = {
+  name: "",
+  objective: "OUTCOME_SALES",
+  status: "PAUSED",
+  special_ad_categories: [],
+  campaign_budget_optimization: true,
+  buying_type: "AUCTION",
+
+  adset_name: "",
+  budget_type: "DAILY",
+  daily_budget: 50,
+  lifetime_budget: 500,
+  bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+  bid_amount: null,
+  roas_target: null,
+  optimization_goal: "CONVERSIONS",
+  billing_event: "IMPRESSIONS",
+  conversion_event: "PURCHASE",
+  pixel_id: "",
+  start_time: "",
+  end_time: "",
+  age_min: 18,
+  age_max: 65,
+  genders: [0],
+  countries: ["BR"],
+  regions: [],
+  cities: [],
+  interests: [],
+  placement_type: "AUTOMATIC",
+  publisher_platforms: ["facebook", "instagram", "audience_network", "messenger"],
+  facebook_positions: ["feed", "story", "reels", "marketplace", "video_feeds", "right_hand_column", "search"],
+  instagram_positions: ["stream", "story", "reels", "explore", "explore_home", "shop"],
+  audience_network_positions: ["classic", "rewarded_video"],
+  messenger_positions: ["messenger_home", "sponsored_messages", "story"],
+
+  ad_name: "",
+  facebook_page_id: "",
+  instagram_account_id: "",
+  creative_type: "IMAGE",
+  image_url: "",
+  video_url: "",
+  primary_text: "",
+  headline: "",
+  description: "",
+  destination_url: "",
+  display_link: "",
+  call_to_action: "LEARN_MORE",
+  url_parameters: "",
+};
+
 // ==================== API RESPONSES ====================
 export interface MetaApiResponse<T> {
   data: T[];
