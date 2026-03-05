@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 
+function maskValue(value: string): string {
+  if (!value || value.length < 8) return "••••••••";
+  return value.substring(0, 4) + "••••" + value.substring(value.length - 4);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -40,6 +45,7 @@ export async function POST(req: NextRequest) {
 
     await fs.writeFile(envPath, newEnv + "\n", "utf-8");
 
+    // Never return actual tokens — only masked confirmation
     return NextResponse.json({
       success: true,
       message: "Configurações salvas. Reinicie o servidor para aplicar.",
@@ -52,17 +58,18 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    const hasMetaToken = !!process.env.META_ACCESS_TOKEN;
-    const hasMetaAccount = !!process.env.META_AD_ACCOUNT_ID;
-    const hasClaudeKey = !!process.env.ANTHROPIC_API_KEY;
+    const metaToken = process.env.META_ACCESS_TOKEN || "";
+    const metaAccount = process.env.META_AD_ACCOUNT_ID || "";
+    const claudeKey = process.env.ANTHROPIC_API_KEY || "";
 
+    // Never expose real values — only booleans and masked hints
     return NextResponse.json({
       data: {
-        meta_configured: hasMetaToken && hasMetaAccount,
-        claude_configured: hasClaudeKey,
-        meta_account_id: process.env.META_AD_ACCOUNT_ID
-          ? `${process.env.META_AD_ACCOUNT_ID.substring(0, 8)}...`
-          : null,
+        meta_configured: !!(metaToken && metaAccount),
+        claude_configured: !!claudeKey,
+        meta_account_hint: metaAccount ? maskValue(metaAccount) : null,
+        meta_token_hint: metaToken ? maskValue(metaToken) : null,
+        claude_key_hint: claudeKey ? maskValue(claudeKey) : null,
       },
     });
   } catch (error: unknown) {
