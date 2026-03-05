@@ -103,6 +103,15 @@ export async function POST(req: NextRequest) {
       message: "Configurações salvas com sucesso!",
     });
 
+    // Clean up old cookie from previous system
+    response.cookies.set("metaads_credentials", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+
     // Save Meta creds in one cookie (token + account)
     if (finalToken || finalAccount) {
       const metaPayload = encrypt(JSON.stringify({ t: finalToken, a: finalAccount }));
@@ -131,6 +140,14 @@ export async function POST(req: NextRequest) {
     const msg = error instanceof Error ? error.message : "Erro ao salvar configurações";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+export async function DELETE(req: NextRequest) {
+  const response = NextResponse.json({ success: true, message: "Credenciais removidas." });
+  response.cookies.set(COOKIE_META, "", { path: "/", maxAge: 0 });
+  response.cookies.set(COOKIE_CLAUDE, "", { path: "/", maxAge: 0 });
+  response.cookies.set("metaads_credentials", "", { path: "/", maxAge: 0 });
+  return response;
 }
 
 export async function GET(req: NextRequest) {

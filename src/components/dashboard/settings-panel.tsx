@@ -277,15 +277,30 @@ export function SettingsPanel() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {(isMetaConfigured || isClaudeConfigured) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFields(!showFields)}
-                  className="text-xs"
-                >
-                  {showFields ? <EyeOff className="mr-1 h-3.5 w-3.5" /> : <Eye className="mr-1 h-3.5 w-3.5" />}
-                  {showFields ? "Ocultar campos" : "Atualizar credenciais"}
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFields(!showFields)}
+                    className="text-xs"
+                  >
+                    {showFields ? <EyeOff className="mr-1 h-3.5 w-3.5" /> : <Eye className="mr-1 h-3.5 w-3.5" />}
+                    {showFields ? "Ocultar campos" : "Atualizar credenciais"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-red-500 hover:text-red-700"
+                    onClick={async () => {
+                      await fetch("/api/settings", { method: "DELETE" });
+                      setConfigStatus(null);
+                      setShowFields(false);
+                    }}
+                  >
+                    <XCircle className="mr-1 h-3.5 w-3.5" />
+                    Limpar credenciais
+                  </Button>
+                </>
               )}
             </div>
             <Button onClick={handleSave} disabled={saving || (!metaToken && !metaAccountId && !claudeKey)}>
