@@ -134,43 +134,111 @@ export class MetaAdsApi {
   async duplicateCampaign(
     campaignId: string,
     newName?: string,
-    statusOption: string = "PAUSED"
-  ): Promise<{ copied_campaign_id: string }> {
-    // The Meta Graph API /{campaign-id}/copies endpoint
-    const body: Record<string, unknown> = {
-      status_option: statusOption,
-    };
+    _statusOption: string = "PAUSED"
+  ): Promise<{ copied_campaign_id: string; adsets_copied: number; ads_copied: number }> {
+    const suffix = newName || "Cópia";
 
-    if (newName) {
-      body.rename_options = JSON.stringify({ rename_suffix: ` - ${newName}` });
-    }
+    // Step 1: Read original campaign
+    const original = await this.getCampaign(campaignId);
+    const newCampaign = await this.createCampaign({
+      name: `${original.name} - ${suffix}`,
+      objective: original.objective as CampaignObjective,
+      status: "PAUSED",
+      daily_budget: original.daily_budget ? parseFloat(original.daily_budget) / 100 : undefined,
+      lifetime_budget: original.lifetime_budget ? parseFloat(original.lifetime_budget) / 100 : undefined,
+      special_ad_categories: [],
+    });
 
-    try {
-      const res = await this.client.post(`/${campaignId}/copies`, body);
-      const copiedId =
-        res.data?.copied_campaign_id ||
-        res.data?.copied_object_id ||
-        res.data?.id ||
-        "";
-      return { copied_campaign_id: copiedId };
-    } catch (error: unknown) {
-      // Fallback: read original campaign and create a new one with the same params
-      const original = await this.getCampaign(campaignId);
-      const suffix = newName || "Cópia";
-      const createResult = await this.createCampaign({
-        name: `${original.name} - ${suffix}`,
-        objective: original.objective as CampaignObjective,
+    // Step 2: Read all ad sets from original campaign
+    const originalAdSets = await this.getAdSetsDetailed(campaignId);
+    let totalAdsCopied = 0;
+
+    for (const adSet of originalAdSets) {
+      // Create new ad set under new campaign
+      const newAdSetBody: Record<string, unknown> = {
+        name: adSet.name,
+        campaign_id: newCampaign.id,
+        billing_event: adSet.billing_event || "IMPRESSIONS",
+        optimization_goal: adSet.optimization_goal || "CONVERSIONS",
+        targeting: adSet.targeting || { geo_locations: { countries: ["BR"] } },
         status: "PAUSED",
-        daily_budget: original.daily_budget
-          ? parseFloat(original.daily_budget) / 100
-          : undefined,
-        lifetime_budget: original.lifetime_budget
-          ? parseFloat(original.lifetime_budget) / 100
-          : undefined,
-        special_ad_categories: [],
-      });
-      return { copied_campaign_id: createResult.id };
+      };
+      if (adSet.daily_budget) newAdSetBody.daily_budget = adSet.daily_budget;
+      if (adSet.lifetime_budget) newAdSetBody.lifetime_budget = adSet.lifetime_budget;
+      if (adSet.bid_amount) newAdSetBody.bid_amount = adSet.bid_amount;
+      if (adSet.bid_strategy) newAdSetBody.bid_strategy = adSet.bid_strategy;
+      if (adSet.promoted_object) newAdSetBody.promoted_object = adSet.promoted_object;
+      // Use future start_time to avoid validation errors
+      newAdSetBody.start_time = new Date(Date.now() + 3600000).toISOString();
+      if (adSet.end_time) {
+        const endDate = new Date(adSet.end_time as string);
+        if (endDate > new Date()) newAdSetBody.end_time = adSet.end_time;
+      }
+
+      const newAdSet = await this.client.post(`/${this.adAccountId}/adsets`, newAdSetBody);
+      const newAdSetId = newAdSet.data.id;
+
+      // Step 3: Read all ads from original ad set and duplicate them
+      const originalAds = await this.getAdsDetailed(adSet.id as string);
+      for (const ad of originalAds) {
+        try {
+          const newAdBody: Record<string, unknown> = {
+            name: ad.name,
+            adset_id: newAdSetId,
+            status: "PAUSED",
+          };
+          // Reuse existing creative (same creative_id)
+          const creative = ad.creative as Record<string, unknown> | undefined;
+          if (creative?.id) {
+            newAdBody.creative = { creative_id: creative.id };
+          }
+          await this.client.post(`/${this.adAccountId}/ads`, newAdBody);
+          totalAdsCopied++;
+        } catch {
+          // Skip ads that fail (e.g. expired creatives)
+        }
+      }
     }
+
+    return {
+      copied_campaign_id: newCampaign.id,
+      adsets_copied: originalAdSets.length,
+      ads_copied: totalAdsCopied,
+    };
+  }
+
+  // Read ad sets with all fields needed for duplication
+  private async getAdSetsDetailed(campaignId: string): Promise<Record<string, unknown>[]> {
+    const fields = [
+      "id", "name", "status", "daily_budget", "lifetime_budget",
+      "billing_event", "optimization_goal", "targeting",
+      "start_time", "end_time", "bid_amount", "bid_strategy",
+      "promoted_object", "attribution_spec",
+    ].join(",");
+    const res = await this.client.get(`/${campaignId}/adsets`, {
+      params: {
+        fields,
+        limit: 100,
+        effective_status: JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]),
+      },
+    });
+    return res.data.data || [];
+  }
+
+  // Read ads with full creative details for duplication
+  private async getAdsDetailed(adSetId: string): Promise<Record<string, unknown>[]> {
+    const fields = [
+      "id", "name", "status", "adset_id",
+      "creative{id,name,title,body,image_url,thumbnail_url,link_url,object_story_spec,call_to_action_type,effective_object_story_id}",
+    ].join(",");
+    const res = await this.client.get(`/${adSetId}/ads`, {
+      params: {
+        fields,
+        limit: 100,
+        effective_status: JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]),
+      },
+    });
+    return res.data.data || [];
   }
 
   async deleteCampaign(campaignId: string): Promise<{ success: boolean }> {
