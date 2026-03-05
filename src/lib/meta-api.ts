@@ -75,6 +75,9 @@ class MetaAdsApi {
     daily_budget?: number;
     lifetime_budget?: number;
     special_ad_categories?: string[];
+    campaign_budget_optimization?: boolean;
+    buying_type?: string;
+    bid_strategy?: string;
   }): Promise<{ id: string }> {
     const body: Record<string, unknown> = {
       name: params.name,
@@ -82,8 +85,16 @@ class MetaAdsApi {
       status: params.status || "PAUSED",
       special_ad_categories: params.special_ad_categories || [],
     };
-    if (params.daily_budget) body.daily_budget = Math.round(params.daily_budget * 100);
-    if (params.lifetime_budget) body.lifetime_budget = Math.round(params.lifetime_budget * 100);
+    if (params.buying_type) body.buying_type = params.buying_type;
+    if (params.campaign_budget_optimization !== undefined) {
+      body.is_campaign_budget_optimization = params.campaign_budget_optimization;
+    }
+    // CBO: budget goes on campaign level
+    if (params.campaign_budget_optimization) {
+      if (params.daily_budget) body.daily_budget = Math.round(params.daily_budget * 100);
+      if (params.lifetime_budget) body.lifetime_budget = Math.round(params.lifetime_budget * 100);
+      if (params.bid_strategy) body.bid_strategy = params.bid_strategy;
+    }
 
     const res = await this.client.post(`/${this.adAccountId}/campaigns`, body);
     return res.data;
@@ -155,6 +166,10 @@ class MetaAdsApi {
     end_time?: string;
     status?: string;
     bid_amount?: number;
+    bid_strategy?: string;
+    roas_target?: number;
+    promoted_object?: Record<string, unknown>;
+    is_cbo?: boolean;
   }): Promise<{ id: string }> {
     const body: Record<string, unknown> = {
       name: params.name,
@@ -164,11 +179,17 @@ class MetaAdsApi {
       targeting: params.targeting,
       status: params.status || "PAUSED",
     };
-    if (params.daily_budget) body.daily_budget = Math.round(params.daily_budget * 100);
-    if (params.lifetime_budget) body.lifetime_budget = Math.round(params.lifetime_budget * 100);
+    // Budget only at ad set level when CBO is off
+    if (!params.is_cbo) {
+      if (params.daily_budget) body.daily_budget = Math.round(params.daily_budget * 100);
+      if (params.lifetime_budget) body.lifetime_budget = Math.round(params.lifetime_budget * 100);
+    }
     if (params.start_time) body.start_time = params.start_time;
     if (params.end_time) body.end_time = params.end_time;
     if (params.bid_amount) body.bid_amount = Math.round(params.bid_amount * 100);
+    if (params.bid_strategy && !params.is_cbo) body.bid_strategy = params.bid_strategy;
+    if (params.roas_target) body.roas_bid = params.roas_target;
+    if (params.promoted_object) body.promoted_object = params.promoted_object;
 
     const res = await this.client.post(`/${this.adAccountId}/adsets`, body);
     return res.data;
