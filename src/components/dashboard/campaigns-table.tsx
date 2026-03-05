@@ -37,7 +37,7 @@ import type { Campaign, CampaignObjective, CampaignFormData } from "@/types/meta
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
-  onAction: (action: string, params: Record<string, unknown>) => void;
+  onAction: (action: string, params: Record<string, unknown>) => Promise<void> | void;
   loading?: boolean;
 }
 
@@ -84,8 +84,8 @@ export function CampaignsTable({ campaigns, onAction, loading }: CampaignsTableP
     return counts;
   }, [campaigns]);
 
-  const handleCreateFull = (data: CampaignFormData) => {
-    onAction("create_full", data as unknown as Record<string, unknown>);
+  const handleCreateFull = async (data: CampaignFormData) => {
+    await onAction("create_full", data as unknown as Record<string, unknown>);
   };
 
   const handleDuplicate = () => {

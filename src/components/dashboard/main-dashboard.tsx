@@ -230,7 +230,8 @@ export function MainDashboard() {
       }
       return;
     }
-    await apiCall("/api/campaigns", { action, ...params });
+    const result = await apiCall("/api/campaigns", { action, ...params });
+    if (result === null) throw new Error("Falha ao executar ação na Meta API. Verifique as configurações.");
     await fetchCampaigns();
   }, [apiCall, fetchCampaigns, demoMode, store]);
 

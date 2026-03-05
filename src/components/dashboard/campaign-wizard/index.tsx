@@ -22,7 +22,7 @@ import { DEFAULT_CAMPAIGN_FORM } from "@/types/meta-ads";
 interface CampaignWizardProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CampaignFormData) => void;
+  onSubmit: (data: CampaignFormData) => Promise<void> | void;
 }
 
 const STEPS = [
@@ -119,11 +119,12 @@ export function CampaignWizard({ open, onClose, onSubmit }: CampaignWizardProps)
 
     setSubmitting(true);
     try {
-      onSubmit(form);
-      toast.success("Campanha criada com sucesso! Campaign → Ad Set → Ad");
+      await onSubmit(form);
+      toast.success("Campanha criada com sucesso!");
       handleReset();
-    } catch {
-      toast.error("Erro ao criar campanha.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao criar campanha. Verifique os dados e tente novamente.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
