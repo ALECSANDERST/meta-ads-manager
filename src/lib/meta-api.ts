@@ -133,15 +133,44 @@ export class MetaAdsApi {
 
   async duplicateCampaign(
     campaignId: string,
-    newName: string,
+    newName?: string,
     statusOption: string = "PAUSED"
   ): Promise<{ copied_campaign_id: string }> {
-    const res = await this.client.post(`/${campaignId}/copies`, {
-      rename_options: { rename_suffix: ` - ${newName}` },
+    // The Meta Graph API /{campaign-id}/copies endpoint
+    const body: Record<string, unknown> = {
       status_option: statusOption,
-      deep_copy: true,
-    });
-    return { copied_campaign_id: res.data.copied_object_id || res.data.id };
+    };
+
+    if (newName) {
+      body.rename_options = JSON.stringify({ rename_suffix: ` - ${newName}` });
+    }
+
+    try {
+      const res = await this.client.post(`/${campaignId}/copies`, body);
+      const copiedId =
+        res.data?.copied_campaign_id ||
+        res.data?.copied_object_id ||
+        res.data?.id ||
+        "";
+      return { copied_campaign_id: copiedId };
+    } catch (error: unknown) {
+      // Fallback: read original campaign and create a new one with the same params
+      const original = await this.getCampaign(campaignId);
+      const suffix = newName || "Cópia";
+      const createResult = await this.createCampaign({
+        name: `${original.name} - ${suffix}`,
+        objective: original.objective as CampaignObjective,
+        status: "PAUSED",
+        daily_budget: original.daily_budget
+          ? parseFloat(original.daily_budget) / 100
+          : undefined,
+        lifetime_budget: original.lifetime_budget
+          ? parseFloat(original.lifetime_budget) / 100
+          : undefined,
+        special_ad_categories: [],
+      });
+      return { copied_campaign_id: createResult.id };
+    }
   }
 
   async deleteCampaign(campaignId: string): Promise<{ success: boolean }> {
