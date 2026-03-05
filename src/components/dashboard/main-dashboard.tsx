@@ -70,6 +70,28 @@ export function MainDashboard() {
         const data = await res.json();
         if (data.data?.meta_configured) {
           setDemoMode(false);
+          // Fetch real data from Facebook API
+          const [campaignsRes, adSetsRes, adsRes, reportsRes, audiencesRes] = await Promise.allSettled([
+            fetch("/api/campaigns").then((r) => r.json()),
+            fetch("/api/adsets").then((r) => r.json()),
+            fetch("/api/ads").then((r) => r.json()),
+            fetch("/api/reports", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ level: "campaign", date_preset: "last_30d" }),
+            }).then((r) => r.json()),
+            fetch("/api/audiences").then((r) => r.json()),
+          ]);
+          if (campaignsRes.status === "fulfilled" && campaignsRes.value.data)
+            store.setCampaigns(campaignsRes.value.data);
+          if (adSetsRes.status === "fulfilled" && adSetsRes.value.data)
+            store.setAdSets(adSetsRes.value.data);
+          if (adsRes.status === "fulfilled" && adsRes.value.data)
+            store.setAds(adsRes.value.data);
+          if (reportsRes.status === "fulfilled" && reportsRes.value.data)
+            store.setReports(reportsRes.value.data);
+          if (audiencesRes.status === "fulfilled" && audiencesRes.value.data)
+            store.setAudiences(audiencesRes.value.data);
           return;
         }
       } catch {
