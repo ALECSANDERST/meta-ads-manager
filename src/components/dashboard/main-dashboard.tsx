@@ -510,7 +510,21 @@ export function MainDashboard() {
               </div>
             )}
             <OverviewCards reports={store.reports} />
-            <PerformanceChart reports={store.reports} />
+            <PerformanceChart
+              reports={store.reports}
+              onDateRangeChange={(range) => {
+                if (range.preset) {
+                  fetchReports({ date_preset: range.preset });
+                } else if (range.startDate && range.endDate) {
+                  fetchReports({
+                    time_range: {
+                      since: range.startDate,
+                      until: range.endDate,
+                    },
+                  });
+                }
+              }}
+            />
             <CampaignsTable
               campaigns={store.campaigns}
               onAction={handleCampaignAction}
