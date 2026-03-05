@@ -26,7 +26,9 @@ export class MetaAdsApi {
 
   constructor(accessToken?: string, adAccountId?: string) {
     this.accessToken = accessToken || process.env.META_ACCESS_TOKEN || "";
-    this.adAccountId = adAccountId || process.env.META_AD_ACCOUNT_ID || "";
+    let acctId = adAccountId || process.env.META_AD_ACCOUNT_ID || "";
+    if (acctId && !acctId.startsWith("act_")) acctId = `act_${acctId}`;
+    this.adAccountId = acctId;
     this.client = axios.create({
       baseURL: META_BASE_URL,
       params: { access_token: this.accessToken },
@@ -55,7 +57,13 @@ export class MetaAdsApi {
     ];
     const res = await this.client.get<MetaApiResponse<Campaign>>(
       `/${this.adAccountId}/campaigns`,
-      { params: { fields: (fields || defaultFields).join(","), limit: 100 } }
+      {
+        params: {
+          fields: (fields || defaultFields).join(","),
+          limit: 100,
+          effective_status: JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]),
+        },
+      }
     );
     return res.data.data;
   }
@@ -153,7 +161,11 @@ export class MetaAdsApi {
       "targeting", "start_time", "end_time", "created_time", "updated_time",
     ].join(",");
     const res = await this.client.get<MetaApiResponse<AdSet>>(endpoint, {
-      params: { fields, limit: 100 },
+      params: {
+        fields,
+        limit: 100,
+        effective_status: JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]),
+      },
     });
     return res.data.data;
   }
@@ -248,7 +260,11 @@ export class MetaAdsApi {
       "created_time", "updated_time",
     ].join(",");
     const res = await this.client.get<MetaApiResponse<Ad>>(endpoint, {
-      params: { fields, limit: 100 },
+      params: {
+        fields,
+        limit: 100,
+        effective_status: JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]),
+      },
     });
     return res.data.data;
   }
